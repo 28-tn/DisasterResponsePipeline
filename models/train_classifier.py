@@ -1,24 +1,151 @@
 import sys
-
+from sqlalchemy import create_engine
+import pandas as pd
+import nltk
+import re
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import classification_report
+from nltk.stem import WordNetLemmatizer, SnowballStemmer
+from sklearn.svm import SVC
+import pickle
 
 def load_data(database_filepath):
-    pass
+    """
+    Loads data from sqlite3 database
+
+    Parameters
+    ----------
+    database_filepath : String
+        Path to the sqlite3 database
+
+    Returns
+    -------
+    X : Pandas.Series
+        Message data from the database
+    Y : Pandas.DataFrame
+        Labels from the database, one column per category
+    category_names : List of strings
+        List of category names
+
+    """
+    engine = create_engine('sqlite:///'+database_filepath)
+    df = pd.read_sql_table('response_data', engine)
+    X = df['message']
+    Y = df.drop(columns=['id','message','original','genre'])
+    category_names = Y.columns
+    return X, Y, category_names
 
 
 def tokenize(text):
-    pass
+    """
+    Tokenize the given text using lower case, removing punctuation,
+    tokenize to single words, lemmatize and stem
+
+    Parameters
+    ----------
+    text : String
+        Text to be tokenized
+
+    Returns
+    -------
+    stemmed_words : List of strings
+        Tokens (stemmed words) extracted from the text
+
+    """
+    # lower case
+    text = text.lower()
+    
+    # Remove punctuation
+    text = re.sub('\W', ' ', text)
+    
+    # Word tokenize
+    words = nltk.word_tokenize(text)
+    
+    # Remove stopwords
+    words = [word for word in words if not word in (set(words).intersection(nltk.corpus.stopwords.words('english')))]
+    
+    # Lemmatize
+    lemmatizer = WordNetLemmatizer()
+    clean_words = []
+    for word in words:
+        clean_words.append(lemmatizer.lemmatize(word))
+    
+    # Stemming
+    stemmer = SnowballStemmer('english')
+    stemmed_words = []
+    for word in clean_words:
+        stemmed_words.append(stemmer.stem(word))
+    
+    return stemmed_words
 
 
 def build_model():
-    pass
+    """
+    Build model pipeline of CountVectorizer, TfidfTransformer and
+    multiple SVM classifier
+
+    Returns
+    -------
+    pipeline : sklearn.Pipeline
+        Pipeline consisting of transformers and predictor
+
+    """
+    pipeline = Pipeline([
+        ('vect', CountVectorizer(tokenizer=tokenize)),
+        ('tfidf', TfidfTransformer()),
+        ('clf', MultiOutputClassifier(SVC()))
+    ])
+    pipeline.set_params(clf__estimator__class_weight='balanced')
+    return pipeline
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+    """
+    Evaluate the model on the test data and prints out the results
+
+    Parameters
+    ----------
+    model : Model object with .predict() method
+        Model (or pipeline) to be evaluated
+    X_test : Pandas.Series or Numpy.Array
+        Features of the test data
+    Y_test : Pandas.DataFrame or Numpy.Array
+        Labels corresponding to the test data
+    category_names : List of strings
+        Names of the labels
+
+    Returns
+    -------
+    None.
+
+    """
+    Y_test_pred = model.predict(X_test)
+    for i, category in enumerate category_names:
+        print(category)
+        print(classification_report(Y_test[category], Y_test_pred[:,i]))
 
 
 def save_model(model, model_filepath):
-    pass
+    """
+    Save the model to the given filepath.
+
+    Parameters
+    ----------
+    model : sklearn.predictor
+        Model to be saved
+    model_filepath : string
+        Determines where to store the model
+
+    Returns
+    -------
+    None.
+
+    """
+    pickle.dump(model, model_filepath)
 
 
 def main():
@@ -50,4 +177,6 @@ def main():
 
 
 if __name__ == '__main__':
+    if len(sys.argv) == 1:
+        sys.argv.extend(['../data/DisasterResponse.db', 'classifier.pkl'])
     main()
