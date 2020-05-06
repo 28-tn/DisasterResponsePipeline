@@ -73,6 +73,21 @@ def clean_data(df):
 
 
 def save_data(df, database_filename):
+    """
+    Save the dataframe to a sqlite3 database
+
+    Parameters
+    ----------
+    df : Pandas.DataFrame
+        Data to be saved in the database
+    database_filename : String
+        Path to the database
+
+    Returns
+    -------
+    None.
+
+    """
     
     # Connect to database
     con = sqlite3.connect(database_filename)
