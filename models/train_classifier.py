@@ -100,8 +100,11 @@ def build_model():
         ('clf', MultiOutputClassifier(SVC()))
     ])
     pipeline.set_params(clf__estimator__class_weight='balanced')
-    pipeline.set_params(clf__estimator__C=1.25)
-    pipeline.set_params(clf__estimator__gamma=1)
+    
+    parameters = {'clf__estimator__C': [1.1, 1.25, 1.4], 'clf__estimator__gamma': [0.75, 1, 1.25]}
+    cv = GridSearchCV(pipeline, parameters, n_jobs=3)
+    #pipeline.set_params(clf__estimator__C=1.25)
+    #pipeline.set_params(clf__estimator__gamma=1)
     return pipeline
 
 
