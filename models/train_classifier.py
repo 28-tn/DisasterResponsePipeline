@@ -100,6 +100,8 @@ def build_model():
         ('clf', MultiOutputClassifier(SVC()))
     ])
     pipeline.set_params(clf__estimator__class_weight='balanced')
+    pipeline.set_params(clf__estimator__C=1.25)
+    pipeline.set_params(clf__estimator__gamma=1)
     return pipeline
 
 
@@ -124,7 +126,7 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
     """
     Y_test_pred = model.predict(X_test)
-    for i, category in enumerate category_names:
+    for i, category in enumerate(category_names):
         print(category)
         print(classification_report(Y_test[category], Y_test_pred[:,i]))
 
@@ -145,7 +147,8 @@ def save_model(model, model_filepath):
     None.
 
     """
-    pickle.dump(model, model_filepath)
+    with open(model_filepath, 'wb') as f:
+        pickle.dump(model, f)
 
 
 def main():
@@ -177,6 +180,6 @@ def main():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        sys.argv.extend(['../data/DisasterResponse.db', 'classifier.pkl'])
+    # if len(sys.argv) == 1:
+    #     sys.argv.extend(['../data/DisasterResponse.db', 'classifier.pkl'])
     main()
