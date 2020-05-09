@@ -1,13 +1,14 @@
 import json
 import plotly
 import pandas as pd
+import numpy as np
 
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
 from flask import Flask
 from flask import render_template, request, jsonify
-from plotly.graph_objs import Bar
+from plotly.graph_objs import Bar, Heatmap, Scatter
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
 
@@ -39,31 +40,73 @@ model = joblib.load("../models/classifier.pkl")
 def index():
     
     # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
-    genre_counts = df.groupby('genre').count()['message']
-    genre_names = list(genre_counts.index)
+    # data for distribution of message lengths
+    y_raw, x_raw = np.histogram(df['message'].apply(len), bins=1000)
+    n = 50
+    y_len = y_raw[:n]
+    x_len = []
+    for i in range(n):
+        mid = int((x_raw[i]+x_raw[i+1])/2)
+        x_len.append(mid)
+    
+    # data for distribution of number of categories
+    Y = df.drop(columns=['id','message','original','genre'])
+    y_raw, x_raw = np.histogram(Y.sum(axis=1), bins=30)
+    y_cat = y_raw
+    x_cat = []
+    for i in range(len(y_cat)):
+        x_cat.append(int((x_raw[i]+x_raw[i+1])/2))
+    
+    # data for correlation heatmap
+    z = list(np.array(Y.corr()))
+    x_cor = Y.columns
+    y_cor = Y.columns
     
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
     graphs = [
         {
             'data': [
                 Bar(
-                    x=genre_names,
-                    y=genre_counts
+                    x=x_len,
+                    y=y_len
                 )
             ],
 
             'layout': {
-                'title': 'Distribution of Message Genres',
+                'title': 'Distribution of Message Lengths',
                 'yaxis': {
                     'title': "Count"
                 },
                 'xaxis': {
-                    'title': "Genre"
+                    'title': "Length"
                 }
             }
-        }
+        },
+        {
+            'data': [
+                Bar(
+                    x=x_cat,
+                    y=y_cat)],
+            'layout': {
+                'title': 'Distribution of active Categories',
+                'yaxis': {
+                    'title': "Count"},
+                'xaxis': {
+                    'title': "Active Categories"}
+                }
+        },
+        {
+            'data': [
+                Heatmap(
+                    z=z, x=x_cor, y=y_cor)],
+            'layout': {
+                'title': 'Correlations between Categories',
+                'yaxis': {
+                    'title': "Categories"},
+                'xaxis': {
+                    'title': "Categories"}
+                }
+        },
     ]
     
     # encode plotly graphs in JSON
