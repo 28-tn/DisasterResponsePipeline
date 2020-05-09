@@ -49,7 +49,7 @@ def load_data(messages_filepath, categories_filepath):
 
 def clean_data(df):
     """
-    Cleans the data (removes duplicates)
+    Cleans the data (removes duplicates and columns without variation)
 
     Parameters
     ----------
@@ -68,6 +68,16 @@ def clean_data(df):
     df = df.drop_duplicates(subset='id')
     new_lines = df.shape[0]
     print('Removed {} duplicate rows'.format(old_lines-new_lines))
+    
+    # Drop columns without variation
+    old_cols = df.shape[1]
+    columns_without_variation = []
+    for col in df.columns:
+        if len(df[col].unique()) < 2:
+            columns_without_variation.append(col)
+    df = df.drop(columns=columns_without_variation)
+    new_cols = df.shape[1]
+    print('Removed {} columns without variation'.format(old_cols-new_cols))
     
     return df
 
